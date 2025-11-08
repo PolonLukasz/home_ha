@@ -1,0 +1,98 @@
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - ha_config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    privileged: true
+    networks:
+      - homeassistant_internal
+      - homeassistant_external
+    ports:
+      - 8123:8123
+
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    build: ./zigbee2mqtt/
+    restart: unless-stopped
+    volumes:
+      - z2mqtt_data:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      # Frontend port
+      - 8080:8080
+    environment:
+      - TZ=Europe/Berlin
+      - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=${ZIGBEE2MQTT_CONFIG_MQTT_SERVER}
+      - ZIGBEE2MQTT_CONFIG_MQTT_USER=${ZIGBEE2MQTT_CONFIG_MQTT_USER}
+      - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD}
+    devices:
+      - /dev/serial/by-id/usb-ITead_Sonoff_Zigbee_3.0_USB_Dongle_Plus_5051a6222c55ef11a7ba5a73cc32aab1-if00-port0:/dev/ttyUSB0
+    networks:
+      - homeassistant_internal
+      - homeassistant_external
+
+  mqtt:
+    build: ./mosquitto/
+    container_name: mqtt
+    restart: unless-stopped
+    volumes:
+      - "mqtt_config:/mosquitto/config:rw"
+      - "mqtt_data:/mosquitto/data:rw"
+      - "mqtt_log:/mosquitto/log:rw"
+    environment:
+      - MQTT_USER=${MQTT_USER}
+      - MQTT_PASSWORD=${MQTT_PASSWORD}
+    #ports:
+    #  - "1883:1883"
+    #  - "9001:9001"
+    networks:
+      - homeassistant_internal
+
+  ha_postgres:
+    image: postgres:15
+    container_name: ha-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: 
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - homeassistant_internal
+      - homeassistant_external
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+    #   interval: 10s
+    #   timeout: 5s
+    #   retires: 5
+
+
+networks:
+  homeassistant_internal:
+    driver: bridge
+    internal: true
+  homeassistant_external:
+    driver: bridge
+
+
+volumes:
+  pgdata:
+    driver: local
+  mqtt_data:
+    driver: local
+  mqtt_config:
+    driver: local
+  mqtt_log:
+    driver: local
+  z2mqtt_data:
+    driver: local
+  ha_config:
+    driver: local
