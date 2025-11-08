@@ -1,0 +1,14 @@
+mqtt:
+  base_topic: zigbee2mqtt
+  server: example
+  user: example
+  password: example
+serial:
+  port: /dev/ttyUSB0
+  adapter: zstack
+frontend:
+  enabled: true
+  port: 8080
+homeassistant:
+  enabled: true
+version: 4
