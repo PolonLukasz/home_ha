@@ -1,0 +1,7 @@
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Record device states to PostgreSQL instead of the default local SQLite database.
+# RECORDER_DB_URL is constructed in docker-compose from the POSTGRES_* variables.
+recorder:
+  db_url: !env_var RECORDER_DB_URL
